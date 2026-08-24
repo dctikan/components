@@ -836,6 +836,110 @@ describe('CdkVirtualScrollViewport', () => {
         expect(appRef.tick).not.toHaveBeenCalled();
       }));
     });
+
+    describe('fork disableAppending accumulation', () => {
+      const orientations: Array<'vertical' | 'horizontal'> = ['vertical', 'horizontal'];
+
+      orientations.forEach(orientation => {
+        it(`keeps the contiguous envelope when disableAppending is false (${orientation})`, fakeAsync(() => {
+          testComponent.orientation = orientation;
+          testComponent.disableAppending = false;
+          finishInit(fixture);
+          triggerScroll(viewport, testComponent.itemSize * 6);
+          fixture.detectChanges();
+          flush();
+
+          expect(viewport.getRenderedRange())
+            .withContext(`${orientation} default accumulation must not shrink start after scrolling`)
+            .toEqual({start: 0, end: 10});
+        }));
+      });
+
+      it('shrinks again when disableAppending is true', fakeAsync(() => {
+        testComponent.disableAppending = true;
+        finishInit(fixture);
+        triggerScroll(viewport, testComponent.itemSize * 6);
+        fixture.detectChanges();
+        flush();
+
+        expect(viewport.getRenderedRange()).toEqual({start: 6, end: 10});
+      }));
+
+      it('resets the envelope when itemSize changes', fakeAsync(() => {
+        testComponent.disableAppending = false;
+        finishInit(fixture);
+        triggerScroll(viewport, testComponent.itemSize * 6);
+        fixture.detectChanges();
+        flush();
+        expect(viewport.getRenderedRange()).toEqual({start: 0, end: 10});
+
+        testComponent.itemSize = 100;
+        fixture.changeDetectorRef.markForCheck();
+        fixture.detectChanges();
+        flush();
+
+        expect(viewport.getRenderedRange()).toEqual({start: 0, end: 10});
+      }));
+
+      it('resets the envelope when the data length changes', fakeAsync(() => {
+        testComponent.disableAppending = false;
+        finishInit(fixture);
+        triggerScroll(viewport, testComponent.itemSize * 6);
+        fixture.detectChanges();
+        flush();
+
+        testComponent.items = [0, 1, 2, 3, 4];
+        fixture.changeDetectorRef.markForCheck();
+        fixture.detectChanges();
+        flush();
+
+        expect(viewport.getRenderedRange().end).toBeLessThanOrEqual(5);
+      }));
+
+      it('checkViewportSize resets accumulation through onDataLengthChanged', fakeAsync(() => {
+        testComponent.disableAppending = false;
+        finishInit(fixture);
+        triggerScroll(viewport, testComponent.itemSize * 6);
+        fixture.detectChanges();
+        flush();
+        expect(viewport.getRenderedRange()).toEqual({start: 0, end: 10});
+
+        viewport.checkViewportSize();
+        fixture.detectChanges();
+        flush();
+
+        expect(viewport.getRenderedRange()).toEqual({start: 0, end: 10});
+      }));
+    });
+
+    describe('fork disableAppending binding modes', () => {
+      beforeEach(waitForAsync(() => {
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+          imports: [ScrollingModule, FixedSizeOmittedDisableAppending, FixedSizeBareDisableAppending],
+        });
+      }));
+
+      it('omitted disableAppending accumulates because the directive default is false', fakeAsync(() => {
+        const omittedFixture = TestBed.createComponent(FixedSizeOmittedDisableAppending);
+        const omittedViewport = omittedFixture.componentInstance.viewport;
+        finishInit(omittedFixture);
+        triggerScroll(omittedViewport, 300);
+        omittedFixture.detectChanges();
+        flush();
+        expect(omittedViewport.getRenderedRange()).toEqual({start: 0, end: 10});
+      }));
+
+      it('bare disableAppending attribute coerces to true and shrinks', fakeAsync(() => {
+        const bareFixture = TestBed.createComponent(FixedSizeBareDisableAppending);
+        const bareViewport = bareFixture.componentInstance.viewport;
+        finishInit(bareFixture);
+        triggerScroll(bareViewport, 300);
+        bareFixture.detectChanges();
+        flush();
+        expect(bareViewport.getRenderedRange()).toEqual({start: 6, end: 10});
+      }));
+    });
   });
 
   describe('with RTL direction', () => {
@@ -1212,6 +1316,7 @@ function triggerScroll(viewport: CdkVirtualScrollViewport, offset?: number) {
   template: `
     <cdk-virtual-scroll-viewport
         [itemSize]="itemSize" [minBufferPx]="minBufferPx" [maxBufferPx]="maxBufferPx"
+        [disableAppending]="disableAppending"
         [orientation]="orientation" [style.height.px]="viewportHeight"
         [style.width.px]="viewportWidth" (scrolledIndexChange)="scrolledToIndex = $event"
         [class.has-margin]="hasMargin">
@@ -1261,6 +1366,7 @@ class FixedSizeVirtualScroll {
   itemSize = 50;
   minBufferPx = 0;
   maxBufferPx = 0;
+  disableAppending = true;
   items = Array(10)
     .fill(0)
     .map((_, i) => i);
@@ -1281,8 +1387,122 @@ class FixedSizeVirtualScroll {
 
 @Component({
   template: `
+    <cdk-virtual-scroll-viewport
+        [itemSize]="itemSize" [minBufferPx]="minBufferPx" [maxBufferPx]="maxBufferPx"
+        [orientation]="orientation" [style.height.px]="viewportHeight"
+        [style.width.px]="viewportWidth">
+      <div class="item"
+           *cdkVirtualFor="let item of items; let itemIndex = index"
+           [style.height.px]="itemSize" [style.width.px]="itemSize">
+        {{itemIndex}} - {{item}}
+      </div>
+    </cdk-virtual-scroll-viewport>
+  `,
+  styles: `
+    .cdk-virtual-scroll-content-wrapper {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cdk-virtual-scroll-orientation-horizontal .cdk-virtual-scroll-content-wrapper {
+      flex-direction: row;
+    }
+
+    .cdk-virtual-scroll-viewport {
+      background-color: #f5f5f5;
+    }
+
+    .item {
+      box-sizing: border-box;
+      border: 1px dashed #ccc;
+    }
+  `,
+  encapsulation: ViewEncapsulation.None,
+  imports: [ScrollingModule],
+})
+class FixedSizeOmittedDisableAppending {
+  @ViewChild(CdkVirtualScrollViewport, {static: true}) viewport: CdkVirtualScrollViewport;
+  orientation = 'vertical';
+  viewportSize = 200;
+  viewportCrossSize = 100;
+  itemSize = 50;
+  minBufferPx = 0;
+  maxBufferPx = 0;
+  items = Array(10)
+    .fill(0)
+    .map((unusedValue, itemIndex) => itemIndex);
+
+  get viewportWidth() {
+    return this.orientation == 'horizontal' ? this.viewportSize : this.viewportCrossSize;
+  }
+
+  get viewportHeight() {
+    return this.orientation == 'horizontal' ? this.viewportCrossSize : this.viewportSize;
+  }
+}
+
+@Component({
+  template: `
+    <cdk-virtual-scroll-viewport
+        disableAppending
+        [itemSize]="itemSize" [minBufferPx]="minBufferPx" [maxBufferPx]="maxBufferPx"
+        [orientation]="orientation" [style.height.px]="viewportHeight"
+        [style.width.px]="viewportWidth">
+      <div class="item"
+           *cdkVirtualFor="let item of items; let itemIndex = index"
+           [style.height.px]="itemSize" [style.width.px]="itemSize">
+        {{itemIndex}} - {{item}}
+      </div>
+    </cdk-virtual-scroll-viewport>
+  `,
+  styles: `
+    .cdk-virtual-scroll-content-wrapper {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cdk-virtual-scroll-orientation-horizontal .cdk-virtual-scroll-content-wrapper {
+      flex-direction: row;
+    }
+
+    .cdk-virtual-scroll-viewport {
+      background-color: #f5f5f5;
+    }
+
+    .item {
+      box-sizing: border-box;
+      border: 1px dashed #ccc;
+    }
+  `,
+  encapsulation: ViewEncapsulation.None,
+  imports: [ScrollingModule],
+})
+class FixedSizeBareDisableAppending {
+  @ViewChild(CdkVirtualScrollViewport, {static: true}) viewport: CdkVirtualScrollViewport;
+  orientation = 'vertical';
+  viewportSize = 200;
+  viewportCrossSize = 100;
+  itemSize = 50;
+  minBufferPx = 0;
+  maxBufferPx = 0;
+  items = Array(10)
+    .fill(0)
+    .map((unusedValue, itemIndex) => itemIndex);
+
+  get viewportWidth() {
+    return this.orientation == 'horizontal' ? this.viewportSize : this.viewportCrossSize;
+  }
+
+  get viewportHeight() {
+    return this.orientation == 'horizontal' ? this.viewportCrossSize : this.viewportSize;
+  }
+}
+
+@Component({
+  template: `
     <cdk-virtual-scroll-viewport dir="rtl"
         [itemSize]="itemSize" [minBufferPx]="minBufferPx" [maxBufferPx]="maxBufferPx"
+        [disableAppending]="disableAppending"
         [orientation]="orientation" [style.height.px]="viewportHeight"
         [style.width.px]="viewportWidth" (scrolledIndexChange)="scrolledToIndex = $event">
       <div class="item"
@@ -1324,6 +1544,7 @@ class FixedSizeVirtualScrollWithRtlDirection {
   itemSize = 50;
   minBufferPx = 0;
   maxBufferPx = 0;
+  disableAppending = true;
   items = Array(10)
     .fill(0)
     .map((_, i) => i);
