@@ -31,6 +31,8 @@ ts_project(
     deps = [
         ":collections",
         "//:node_modules/@angular/core",
+        "//:node_modules/@angular/platform-browser",
+        "//:node_modules/rxjs",
     ],
 )
 
