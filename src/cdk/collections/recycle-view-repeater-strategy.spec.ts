@@ -267,6 +267,37 @@ describe('_RecycleViewRepeaterStrategy', () => {
     strategy.detach();
   });
 
+  it('two repeaters sharing RecycleViewElementsState collide on the same trackBy id', () => {
+    const {fixture, strategy, stateService} = createHarness(true);
+    const host = fixture.componentInstance;
+    const secondStrategy = TestBed.runInInjectionContext(
+      () => new _RecycleViewRepeaterStrategy<RepeaterItem, RepeaterItem, RepeaterContext>(),
+    );
+    strategy.setRepeaterId('repeater-a');
+    secondStrategy.setRepeaterId('repeater-b');
+
+    const firstView = createDetachedView(host, {key: 'shared-cell', label: 'first'});
+    const secondView = createDetachedView(host, {key: 'shared-cell', label: 'second'});
+    const firstDestroy = spyOn(firstView, 'destroy').and.callThrough();
+
+    stateService!.retainDetachedView('shared-cell', firstView, 'repeater-a', 'group-a');
+    stateService!.retainDetachedView('shared-cell', secondView, 'repeater-b', 'group-b');
+
+    expect(firstDestroy)
+      .withContext('second retain for the same trackBy id destroys the first repeater view')
+      .toHaveBeenCalledTimes(1);
+    expect(stateService!.takeDetachedView('shared-cell')).toEqual({
+      view: secondView,
+      repeaterId: 'repeater-b',
+      groupId: 'group-b',
+    });
+    expect(stateService!.takeDetachedView('shared-cell')?.repeaterId)
+      .withContext('ownership is a single registry slot, not per-repeater namespacing')
+      .toBe('repeater-b');
+    strategy.detach();
+    secondStrategy.detach();
+  });
+
   it('nested reattach inserts only when realIndex is in the current [start, end)', () => {
     const {fixture, strategy, differs, stateService} = createHarness(true);
     const host = fixture.componentInstance;

@@ -155,6 +155,19 @@ describe('CdkVirtualForOf fork inputs', () => {
     flush();
   }));
 
+  it('propagates the viewport rendered range to the repeater strategy', fakeAsync(() => {
+    const fixture = TestBed.createComponent(ForkInputHost);
+    const virtualFor = fixture.componentInstance.virtualFor as unknown as {
+      _viewRepeater: {setRenderedRange: (range: {start: number; end: number}) => void};
+    };
+    const rangeSpy = spyOn(virtualFor._viewRepeater, 'setRenderedRange').and.callThrough();
+    finishInit(fixture);
+    const renderedRange = fixture.componentInstance.viewport.getRenderedRange();
+    expect(rangeSpy.calls.mostRecent().args[0]).toEqual(renderedRange);
+    expect(renderedRange.end).toBeGreaterThan(renderedRange.start);
+    flush();
+  }));
+
   it('copies cdkVirtualForId onto each rendered context and does not use it as a retain key', fakeAsync(() => {
     const fixture = TestBed.createComponent(ForkInputHost);
     const stateService = fixture.debugElement.injector.get(RecycleViewElementsState);

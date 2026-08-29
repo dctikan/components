@@ -207,11 +207,17 @@ describe('CdkVirtualScrollSticky', () => {
       tick(16);
       flush();
 
-      const viewportTop = viewportElement.getBoundingClientRect().top;
-      const headerTop = stickyHeader.getBoundingClientRect().top;
-      expect(Math.abs(headerTop - viewportTop))
+      const viewportRect = viewportElement.getBoundingClientRect();
+      const headerRect = stickyHeader.getBoundingClientRect();
+      expect(viewportRect.height)
+        .withContext(`viewportRect=${JSON.stringify(viewportRect.toJSON?.() ?? viewportRect)}`)
+        .toBeGreaterThan(0);
+      expect(headerRect.height)
+        .withContext(`headerRect=${JSON.stringify(headerRect.toJSON?.() ?? headerRect)}`)
+        .toBeGreaterThan(0);
+      expect(Math.abs(headerRect.top - viewportRect.top))
         .withContext(
-          `viewportTop=${viewportTop} headerTop=${headerTop} transform=${
+          `viewportTop=${viewportRect.top} headerTop=${headerRect.top} transform=${
             (viewportElement.querySelector('.cdk-virtual-scroll-content-wrapper') as HTMLElement)
               .style.transform
           }`,

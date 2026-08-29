@@ -8,7 +8,10 @@ import {
   waitForAsync,
 } from '@angular/core/testing';
 import {CdkVisibleRange} from './cdk-visible-range.directive';
-import {CdkFixedSizeVirtualScroll} from './fixed-size-virtual-scroll';
+import {
+  CdkFixedSizeVirtualScroll,
+  FixedSizeVirtualScrollStrategy,
+} from './fixed-size-virtual-scroll';
 import {CdkVirtualScrollViewport} from './virtual-scroll-viewport';
 import {ScrollingModule} from './scrolling-module';
 import {dispatchFakeEvent} from '../testing/private';
@@ -121,15 +124,28 @@ describe('CdkVisibleRange', () => {
     expect(visibleRange.range.end).toBe(10);
   }));
 
-  it('restores the original onDataLengthChanged and unsubscribes on destroy', fakeAsync(() => {
+  it('restores the original onDataLengthChanged and closes the scrolledIndexChange subscription on destroy', fakeAsync(() => {
+    const originalCallback = FixedSizeVirtualScrollStrategy.prototype.onDataLengthChanged;
     finishInit(fixture);
     const scrollStrategy = testHost.fixedSize._scrollStrategy;
     const patchedCallback = scrollStrategy.onDataLengthChanged;
+    const rangeSubscription = (
+      visibleRange as unknown as {
+        _scrolledIndexChangeSubscription?: {closed: boolean};
+      }
+    )._scrolledIndexChangeSubscription;
+    const rangeBeforeDestroy = {...visibleRange.range};
+
+    expect(patchedCallback).not.toBe(originalCallback);
+    expect(rangeSubscription?.closed).toBe(false);
 
     fixture.destroy();
 
-    expect(scrollStrategy.onDataLengthChanged).not.toBe(patchedCallback);
-    expect(scrollStrategy.onDataLengthChanged).toBe(testHost.fixedSize._scrollStrategy.onDataLengthChanged);
+    expect(scrollStrategy.onDataLengthChanged).toBe(originalCallback);
+    expect(rangeSubscription?.closed).toBe(true);
+
+    scrollStrategy.onDataLengthChanged();
+    expect(visibleRange.range).toEqual(rangeBeforeDestroy);
   }));
 });
 

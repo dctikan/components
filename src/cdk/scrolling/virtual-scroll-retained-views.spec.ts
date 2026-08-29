@@ -159,7 +159,7 @@ describe('retained view parent/child integration', () => {
     TestBed.configureTestingModule({imports: [ParentChildHost]});
   }));
 
-  it('keeps the focused child instance across parent recycle and restores independent inner offset', fakeAsync(() => {
+  it('keeps the focused child instance across parent recycle and does not restore the inner offset', fakeAsync(() => {
     const fixture = TestBed.createComponent(ParentChildHost);
     const events: RecycleViewDetachEvent[] = [];
     const host = fixture.componentInstance;

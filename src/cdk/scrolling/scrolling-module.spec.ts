@@ -34,6 +34,14 @@ describe('ScrollingModule and scrolling public-api', () => {
     expect('expandRenderedRange' in scrollingPublicApi).toBe(false);
   });
 
+  it('does not export a runtime VisibleRange value; it is a type-only public-api re-export', () => {
+    expect('VisibleRange' in scrollingPublicApi).toBe(false);
+  });
+
+  it('does not export VirtualScrollRenderedRange from scrolling/public-api', () => {
+    expect('VirtualScrollRenderedRange' in scrollingPublicApi).toBe(false);
+  });
+
   it('compiles every fork selector through ScrollingModule', fakeAsync(() => {
     TestBed.configureTestingModule({
       imports: [ModuleContractHost],
@@ -45,8 +53,11 @@ describe('ScrollingModule and scrolling public-api', () => {
     expect(fixture.componentInstance.dynamicSize).toBeInstanceOf(CdkDynamicSizeVirtualScroll);
     expect(fixture.componentInstance.visibleRange).toBeInstanceOf(CdkVisibleRange);
     expect(fixture.componentInstance.sticky).toBeInstanceOf(CdkVirtualScrollSticky);
-    expect(fixture.nativeElement.querySelector('[dynamicsize], [dynamicSize], cdk-virtual-scroll-viewport'))
-      .toBeTruthy();
+    expect(
+      fixture.nativeElement.querySelector(
+        '[dynamicsize], [dynamicSize], cdk-virtual-scroll-viewport',
+      ),
+    ).toBeTruthy();
   }));
 });
 

@@ -1,4 +1,11 @@
-import {Component, Input, QueryList, ViewChild, ViewChildren, ViewEncapsulation} from '@angular/core';
+import {
+  Component,
+  Input,
+  QueryList,
+  ViewChild,
+  ViewChildren,
+  ViewEncapsulation,
+} from '@angular/core';
 import {
   ComponentFixture,
   TestBed,
@@ -55,10 +62,13 @@ describe('fixed-parent / dynamic-child visibleRange fixture', () => {
       fixture.detectChanges();
       flush();
 
-      expect(testHost.parentVisible.range.end)
-        .withContext('coordination end is inclusive for rowindex; DOM ListRange end stays exclusive')
-        .toBeGreaterThanOrEqual(0);
-      expect(insideChild.viewport.getRenderedRange()).not.toEqual(beforeRange);
+      expect(testHost.parentVisible.range)
+        .withContext(
+          'coordination end is inclusive for rowindex; DOM ListRange end stays exclusive',
+        )
+        .toEqual({start: 0, end: 6});
+      expect(insideChild.rowindex).toBeLessThanOrEqual(testHost.parentVisible.range.end);
+      expect(insideChild.viewport.getRenderedRange()).toEqual({start: 1, end: 3});
     }));
 
     it('does not update a child whose rowindex is greater than the inclusive coordination end', fakeAsync(() => {
@@ -72,6 +82,8 @@ describe('fixed-parent / dynamic-child visibleRange fixture', () => {
         .find(childRow => childRow.rowindex > testHost.parentVisible.range.end);
       const outsideRow = mountedOutsideRow ?? createOutsideNestedRow(testHost.parentVisible.range);
       expect(outsideRow).toBeDefined();
+      expect(outsideRow.rowindex).toBeGreaterThan(testHost.parentVisible.range.end);
+      expect(testHost.parentVisible.range.end).toBe(6);
       const beforeRange = outsideRow.viewport.getRenderedRange();
 
       outsideRow.viewport.scrollToOffset(80);
@@ -103,7 +115,10 @@ function triggerScroll(viewport: CdkVirtualScrollViewport, offset?: number) {
   tick(16);
 }
 
-function createOutsideNestedRow(coordinationRange: {start: number; end: number}): NestedRowComponent {
+function createOutsideNestedRow(coordinationRange: {
+  start: number;
+  end: number;
+}): NestedRowComponent {
   const outsideFixture = TestBed.createComponent(NestedRowComponent);
   outsideFixture.componentInstance.visibleRange = coordinationRange;
   outsideFixture.componentInstance.rowindex = coordinationRange.end + 1;

@@ -850,20 +850,27 @@ describe('CdkVirtualScrollViewport', () => {
           flush();
 
           expect(viewport.getRenderedRange())
-            .withContext(`${orientation} default accumulation must not shrink start after scrolling`)
+            .withContext(
+              `${orientation} default accumulation must not shrink start after scrolling`,
+            )
             .toEqual({start: 0, end: 10});
         }));
       });
 
-      it('shrinks again when disableAppending is true', fakeAsync(() => {
-        testComponent.disableAppending = true;
-        finishInit(fixture);
-        triggerScroll(viewport, testComponent.itemSize * 6);
-        fixture.detectChanges();
-        flush();
+      orientations.forEach(orientation => {
+        it(`shrinks again when disableAppending is true (${orientation})`, fakeAsync(() => {
+          testComponent.orientation = orientation;
+          testComponent.disableAppending = true;
+          finishInit(fixture);
+          triggerScroll(viewport, testComponent.itemSize * 6);
+          fixture.detectChanges();
+          flush();
 
-        expect(viewport.getRenderedRange()).toEqual({start: 6, end: 10});
-      }));
+          expect(viewport.getRenderedRange())
+            .withContext(`${orientation} disableAppending true must shrink start`)
+            .toEqual({start: 6, end: 10});
+        }));
+      });
 
       it('resets the envelope when itemSize changes', fakeAsync(() => {
         testComponent.disableAppending = false;
@@ -896,19 +903,25 @@ describe('CdkVirtualScrollViewport', () => {
         expect(viewport.getRenderedRange().end).toBeLessThanOrEqual(5);
       }));
 
-      it('checkViewportSize resets accumulation through onDataLengthChanged', fakeAsync(() => {
-        testComponent.disableAppending = false;
+      it('checkViewportSize does not shrink a non-full envelope and leaves the rendered range unchanged', fakeAsync(() => {
+        testComponent.disableAppending = true;
         finishInit(fixture);
-        triggerScroll(viewport, testComponent.itemSize * 6);
+        const envelopeBeforeResize = viewport.getRenderedRange();
+        expect(envelopeBeforeResize)
+          .withContext('seed a non-full envelope before checkViewportSize')
+          .toEqual({start: 0, end: 4});
+
+        testComponent.viewportSize = 100;
+        fixture.changeDetectorRef.markForCheck();
         fixture.detectChanges();
         flush();
-        expect(viewport.getRenderedRange()).toEqual({start: 0, end: 10});
-
         viewport.checkViewportSize();
         fixture.detectChanges();
         flush();
 
-        expect(viewport.getRenderedRange()).toEqual({start: 0, end: 10});
+        expect(viewport.getViewportSize()).toBe(100);
+        const envelopeAfterResize = viewport.getRenderedRange();
+        expect(envelopeAfterResize).toEqual({start: 0, end: 4});
       }));
     });
 
@@ -916,19 +929,30 @@ describe('CdkVirtualScrollViewport', () => {
       beforeEach(waitForAsync(() => {
         TestBed.resetTestingModule();
         TestBed.configureTestingModule({
-          imports: [ScrollingModule, FixedSizeOmittedDisableAppending, FixedSizeBareDisableAppending],
+          imports: [
+            ScrollingModule,
+            FixedSizeOmittedDisableAppending,
+            FixedSizeBareDisableAppending,
+          ],
         });
       }));
 
-      it('omitted disableAppending accumulates because the directive default is false', fakeAsync(() => {
-        const omittedFixture = TestBed.createComponent(FixedSizeOmittedDisableAppending);
-        const omittedViewport = omittedFixture.componentInstance.viewport;
-        finishInit(omittedFixture);
-        triggerScroll(omittedViewport, 300);
-        omittedFixture.detectChanges();
-        flush();
-        expect(omittedViewport.getRenderedRange()).toEqual({start: 0, end: 10});
-      }));
+      const orientations: Array<'vertical' | 'horizontal'> = ['vertical', 'horizontal'];
+
+      orientations.forEach(orientation => {
+        it(`omitted disableAppending accumulates because the directive default is false (${orientation})`, fakeAsync(() => {
+          const omittedFixture = TestBed.createComponent(FixedSizeOmittedDisableAppending);
+          omittedFixture.componentInstance.orientation = orientation;
+          const omittedViewport = omittedFixture.componentInstance.viewport;
+          finishInit(omittedFixture);
+          triggerScroll(omittedViewport, 300);
+          omittedFixture.detectChanges();
+          flush();
+          expect(omittedViewport.getRenderedRange())
+            .withContext(`${orientation} omitted disableAppending must accumulate`)
+            .toEqual({start: 0, end: 10});
+        }));
+      });
 
       it('bare disableAppending attribute coerces to true and shrinks', fakeAsync(() => {
         const bareFixture = TestBed.createComponent(FixedSizeBareDisableAppending);
