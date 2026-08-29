@@ -292,6 +292,36 @@ describe('_RecycleViewRepeaterStrategy', () => {
     strategy.detach();
   });
 
+  it('nested reattach inserts marked views in realIndex order, not mark order', () => {
+    const {fixture, strategy, differs, stateService} = createHarness(true);
+    const host = fixture.componentInstance;
+    const firstItems = [
+      {key: 'cell-0', label: 'watch'},
+      {key: 'cell-1', label: 'status-left'},
+      {key: 'cell-2', label: 'status-right'},
+      {key: 'cell-3', label: 'assignee'},
+    ];
+    strategy.setTrackByFunction((_index, item) => item.key);
+    strategy.setRepeaterId('repeater-1');
+    strategy.setCollectDetached('group-1');
+    strategy.setItemsTrackByIds(['cell-0', 'cell-1', 'cell-2', 'cell-3']);
+    strategy.setRenderedRange({start: 0, end: 4});
+    applyItems(strategy, host, differs, [], firstItems);
+    stateService!.markForDetach('cell-2');
+    stateService!.markForDetach('cell-1');
+    stateService!.collectDetachedViews('group-1');
+
+    stateService!.notifyInsert('group-1');
+
+    const renderedKeys: string[] = [];
+    for (let viewIndex = 0; viewIndex < host.container.length; viewIndex++) {
+      const renderedView = host.container.get(viewIndex) as EmbeddedViewRef<RepeaterContext>;
+      renderedKeys.push(renderedView.context.$implicit.key);
+    }
+    expect(renderedKeys).toEqual(['cell-0', 'cell-1', 'cell-2', 'cell-3']);
+    strategy.detach();
+  });
+
   it('remove-path trackBy uses the current renderedRange.start plus previousIndex', () => {
     const {fixture, strategy, differs, stateService} = createHarness(true);
     const host = fixture.componentInstance;

@@ -466,26 +466,31 @@ export class _RecycleViewRepeaterStrategy<T, R, C extends _ViewRepeaterItemConte
       return;
     }
 
-    this._recycleViewElementsState.getDetachedIds().forEach(trackById => {
-      const entry = this._recycleViewElementsState!.takeDetachedView<C>(trackById);
-      if (!entry || entry.repeaterId !== this._repeaterId) {
-        return;
-      }
+    this._recycleViewElementsState
+      .getDetachedIds()
+      .slice()
+      .sort(
+        (firstId, secondId) =>
+          this._itemsTrackByIds.indexOf(firstId) - this._itemsTrackByIds.indexOf(secondId),
+      )
+      .forEach(trackById => {
+        const entry = this._recycleViewElementsState!.takeDetachedView<C>(trackById);
+        if (!entry || entry.repeaterId !== this._repeaterId) {
+          return;
+        }
 
-      const localIndex = this._findRenderedViewIndexByTrackById(trackById);
-      // we shouldn't insert View what is already in the dom
-      if (localIndex) return;
+        const localIndex = this._findRenderedViewIndexByTrackById(trackById);
+        if (localIndex) return;
 
-      const {view} = entry;
-      const realIndex = this._itemsTrackByIds.indexOf(trackById);
-      const {start, end} = this._renderedRange;
+        const {view} = entry;
+        const realIndex = this._itemsTrackByIds.indexOf(trackById);
+        const {start, end} = this._renderedRange;
 
-      if (realIndex !== -1 && realIndex >= start && realIndex < end) {
-        // Convert the real (global) index to a local (rendered-window) index.
-        const localIndex = realIndex - start;
-        this._viewContainerRef!.insert(view, localIndex);
-      }
-    });
+        if (realIndex !== -1 && realIndex >= start && realIndex < end) {
+          const insertIndex = realIndex - start;
+          this._viewContainerRef!.insert(view, insertIndex);
+        }
+      });
   }
 
   /** Detaches all currently rendered views that are marked for detached-view retention. */
