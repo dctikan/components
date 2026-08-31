@@ -30,6 +30,7 @@ describe('expandRenderedRange', () => {
     const historicalEnvelope: VirtualScrollRenderedRange = {start: 4, end: 9};
     const finalRange = expandRenderedRange(historicalEnvelope, {start: 1, end: 9});
 
+    expect(historicalEnvelope).toEqual({start: 1, end: 9});
     expect(finalRange).toEqual({start: 1, end: 9});
   });
 
@@ -37,30 +38,42 @@ describe('expandRenderedRange', () => {
     const historicalEnvelope: VirtualScrollRenderedRange = {start: 0, end: 4};
     const finalRange = expandRenderedRange(historicalEnvelope, {start: 0, end: 9});
 
+    expect(historicalEnvelope).toEqual({start: 0, end: 9});
     expect(finalRange).toEqual({start: 0, end: 9});
+  });
+
+  it('expands both bounds when the candidate is wider', () => {
+    const historicalEnvelope: VirtualScrollRenderedRange = {start: 4, end: 9};
+    const finalRange = expandRenderedRange(historicalEnvelope, {start: 1, end: 12});
+
+    expect(historicalEnvelope).toEqual({start: 1, end: 12});
+    expect(finalRange).toEqual({start: 1, end: 12});
   });
 
   it('fills the gap between disjoint candidates into one contiguous envelope', () => {
     const historicalEnvelope: VirtualScrollRenderedRange = {start: 10, end: 20};
     const finalRange = expandRenderedRange(historicalEnvelope, {start: 30, end: 40});
 
+    expect(historicalEnvelope).toEqual({start: 10, end: 40});
     expect(finalRange).toEqual({start: 10, end: 40});
   });
 
-  it('treats a reset envelope as a new accumulation epoch', () => {
-    const historicalEnvelope: VirtualScrollRenderedRange = {start: 0, end: 9};
-    historicalEnvelope.start = null;
-    historicalEnvelope.end = null;
+  it('fills the gap when the candidate is entirely before the envelope', () => {
+    const historicalEnvelope: VirtualScrollRenderedRange = {start: 30, end: 40};
+    const finalRange = expandRenderedRange(historicalEnvelope, {start: 10, end: 20});
 
-    const finalRange = expandRenderedRange(historicalEnvelope, {start: 4, end: 9});
-
-    expect(finalRange).toEqual({start: 4, end: 9});
+    expect(historicalEnvelope).toEqual({start: 10, end: 40});
+    expect(finalRange).toEqual({start: 10, end: 40});
   });
 
-  it('keeps a start-greater-than-end candidate without rejecting it', () => {
+  it('keeps the historical envelope across successive expanding and contained candidates', () => {
     const historicalEnvelope = emptyEnvelope();
-    const finalRange = expandRenderedRange(historicalEnvelope, {start: 5, end: 2});
 
-    expect(finalRange).toEqual({start: 5, end: 2});
+    expandRenderedRange(historicalEnvelope, {start: 10, end: 20});
+    expandRenderedRange(historicalEnvelope, {start: 30, end: 40});
+    const finalRange = expandRenderedRange(historicalEnvelope, {start: 15, end: 18});
+
+    expect(historicalEnvelope).toEqual({start: 10, end: 40});
+    expect(finalRange).toEqual({start: 10, end: 40});
   });
 });
