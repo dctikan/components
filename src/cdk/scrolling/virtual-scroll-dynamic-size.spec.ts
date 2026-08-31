@@ -27,7 +27,7 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
     viewport = testComponent.viewport;
   });
 
-  const VIRTUAL_SCROLL_ORIENTATIONS = ['vertical', 'horizontal'];
+  const VIRTUAL_SCROLL_ORIENTATIONS = ['vertical', 'horizontal'] as const;
 
   VIRTUAL_SCROLL_ORIENTATIONS.forEach(orientation => {
     describe(`${orientation} orientation`, () => {
@@ -48,11 +48,14 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
           } as DynamicSizeSpecProperties;
 
           it('maxBuffer: 200', fakeAsync(() => {
-            expectRenderedState(setupAndGetRenderedRange(config, fixture, testComponent, viewport), {
-              start: 0,
-              end: 4,
-              itemsIds: ['0', '1', '2', '3'],
-            });
+            expectRenderedState(
+              setupAndGetRenderedRange(config, fixture, testComponent, viewport),
+              {
+                start: 0,
+                end: 4,
+                itemsIds: ['0', '1', '2', '3'],
+              },
+            );
           }));
 
           it('maxBuffer: 400', fakeAsync(() => {
@@ -82,11 +85,14 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
           } as DynamicSizeSpecProperties;
 
           it('maxBuffer: 200', fakeAsync(() => {
-            expectRenderedState(setupAndGetRenderedRange(config, fixture, testComponent, viewport), {
-              start: 0,
-              end: 4,
-              itemsIds: ['0', '1', '2', '3'],
-            });
+            expectRenderedState(
+              setupAndGetRenderedRange(config, fixture, testComponent, viewport),
+              {
+                start: 0,
+                end: 4,
+                itemsIds: ['0', '1', '2', '3'],
+              },
+            );
           }));
 
           it('maxBuffer: 200 & minBuffer: 101', fakeAsync(() => {
@@ -198,12 +204,15 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
           } as DynamicSizeSpecProperties;
 
           it('minBuffer: 100 & maxBuffer: 200', fakeAsync(() => {
-            expectRenderedState(setupAndGetRenderedRange(config, fixture, testComponent, viewport), {
-              start: 1,
-              end: 7,
-              // since we have offset: 600px and first three in total have also 600px, the "start" becomes firstVisibleIndex - 1 = 1
-              itemsIds: ['1', '2', '3', '4', '5', '6'],
-            });
+            expectRenderedState(
+              setupAndGetRenderedRange(config, fixture, testComponent, viewport),
+              {
+                start: 1,
+                end: 7,
+                // since we have offset: 600px and first three in total have also 600px, the "start" becomes firstVisibleIndex - 1 = 1
+                itemsIds: ['1', '2', '3', '4', '5', '6'],
+              },
+            );
           }));
 
           it('offset: 601px, minBuffer: 100, maxBuffer: 200', fakeAsync(() => {
@@ -234,11 +243,14 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
           } as DynamicSizeSpecProperties;
 
           it('maxBuffer: 200', fakeAsync(() => {
-            expectRenderedState(setupAndGetRenderedRange(config, fixture, testComponent, viewport), {
-              start: 4,
-              end: 9,
-              itemsIds: ['4', '5', '6', '7', '8'],
-            });
+            expectRenderedState(
+              setupAndGetRenderedRange(config, fixture, testComponent, viewport),
+              {
+                start: 4,
+                end: 9,
+                itemsIds: ['4', '5', '6', '7', '8'],
+              },
+            );
           }));
 
           it('maxBuffer: 400', fakeAsync(() => {
@@ -398,7 +410,10 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
 
           triggerViewport(fixture, viewport);
 
-          expectRenderedState(collectRenderedState(fixture, viewport, testComponent), expectedRange);
+          expectRenderedState(
+            collectRenderedState(fixture, viewport, testComponent),
+            expectedRange,
+          );
         }));
 
         it('item inside the scrolled final DOM range shrank from 600 to 200', fakeAsync(() => {
@@ -841,7 +856,9 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
           );
           expect(renderedState.firstVisibleIndex).toBe(1);
           expect(renderedState.start).toBeGreaterThan(0);
-          expect(renderedState.contentOffset).toBe(renderedState.start === 1 ? 200 : renderedState.contentOffset);
+          expect(renderedState.contentOffset).toBe(
+            renderedState.start === 1 ? 200 : renderedState.contentOffset,
+          );
         }));
 
         it('sets wrapper height to 100% only when stretch is true and content is shorter than the viewport', fakeAsync(() => {
@@ -1098,7 +1115,11 @@ function collectRenderedState(
 
 function expectRenderedState(
   actualState: DynamicSizeRenderedState,
-  expectedState: Partial<DynamicSizeRenderedState> & {start: number; end: number; itemsIds: string[]},
+  expectedState: Partial<DynamicSizeRenderedState> & {
+    start: number;
+    end: number;
+    itemsIds: string[];
+  },
 ) {
   expect(actualState)
     .withContext(
