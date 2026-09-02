@@ -620,7 +620,7 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
         });
 
         describe('offset: end of the list, last items are removed', () => {
-          it('less than viewport, before 6 items, after removal 5 items', fakeAsync(() => {
+          it('renders the complete remaining range after an end-clamped removal', fakeAsync(() => {
             setupAndGetRenderedRange(
               {...baseConfig, scrollOffset: '600'},
               fixture,
@@ -632,9 +632,9 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
             triggerViewport(fixture, viewport);
 
             expectRenderedState(collectRenderedState(fixture, viewport, testComponent), {
-              start: 1,
+              start: 0,
               end: 5,
-              itemsIds: ['1', '2', '3', '4'],
+              itemsIds: ['0', '1', '2', '3', '4'],
             });
           }));
 
@@ -671,9 +671,9 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
             triggerViewport(fixture, viewport);
 
             expectRenderedState(collectRenderedState(fixture, viewport, testComponent), {
-              start: 4,
+              start: 3,
               end: 8,
-              itemsIds: ['4', '6', '7', '8'],
+              itemsIds: ['3', '4', '6', '7', '8'],
             });
           }));
         });
@@ -798,8 +798,8 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
           );
         }));
 
-        it('sets wrapper height to 100% only when stretch is true and content is shorter than the viewport', fakeAsync(() => {
-          const stretchedState = setupAndGetRenderedRange(
+        it('sets wrapper height to 100% when stretch is true and content is shorter', fakeAsync(() => {
+          const renderedState = setupAndGetRenderedRange(
             {
               viewport: '600',
               orientation,
@@ -814,9 +814,11 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
             testComponent,
             viewport,
           );
-          expect(stretchedState.wrapperHeight).toBe('100%');
+          expect(renderedState.wrapperHeight).toBe('100%');
+        }));
 
-          const unstretchedState = setupAndGetRenderedRange(
+        it('leaves wrapper height unset when stretch is false and content is shorter', fakeAsync(() => {
+          const renderedState = setupAndGetRenderedRange(
             {
               viewport: '600',
               orientation,
@@ -831,7 +833,7 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
             testComponent,
             viewport,
           );
-          expect(unstretchedState.wrapperHeight).toBe('');
+          expect(renderedState.wrapperHeight).toBe('');
         }));
 
         it('updates a nested row whose rowindex is inside the inclusive coordination end', fakeAsync(() => {

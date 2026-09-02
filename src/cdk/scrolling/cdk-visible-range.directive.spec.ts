@@ -48,14 +48,14 @@ describe('CdkVisibleRange', () => {
     expect(visibleRange.range).toEqual({start: 2, end: 10});
   }));
 
-  it('clamps start to 0 and end to dataLength', fakeAsync(() => {
+  it('clamps the requested offset and visible range to the data length', fakeAsync(() => {
     finishInit(fixture);
     triggerScroll(viewport, 900);
     fixture.detectChanges();
     flush();
 
-    expect(testHost.scrolledToIndex).toBe(18);
-    expect(visibleRange.range.start).toBe(16);
+    expect(testHost.scrolledToIndex).toBe(16);
+    expect(visibleRange.range.start).toBe(14);
     expect(visibleRange.range.end).toBe(20);
   }));
 
@@ -67,7 +67,7 @@ describe('CdkVisibleRange', () => {
     expect(visibleRange.range).toEqual({start: 0, end: 7});
   }));
 
-  it('refreshes from the last firstVisibleIndex when data length shrinks', fakeAsync(() => {
+  it('refreshes from the adjusted first-visible index when data length shrinks', fakeAsync(() => {
     finishInit(fixture);
     triggerScroll(viewport, 200);
     fixture.detectChanges();
@@ -79,8 +79,7 @@ describe('CdkVisibleRange', () => {
     fixture.detectChanges();
     flush();
 
-    expect(visibleRange.range.start).toBe(2);
-    expect(visibleRange.range.end).toBe(5);
+    expect(visibleRange.range).toEqual({start: 0, end: 5});
   }));
 
   it('does not refresh when itemSize changes until the next scroll or data-length event', fakeAsync(() => {

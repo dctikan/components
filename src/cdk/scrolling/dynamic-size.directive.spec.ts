@@ -68,12 +68,14 @@ describe('CdkDynamicSizeVirtualScroll', () => {
     expect(dynamicSize._scrollStrategy.gridRowIndex).toBe(3);
   });
 
-  it('accepts stretch as a plain boolean input and defaults to false', () => {
+  it('accepts stretch as a plain boolean input and defaults to false', fakeAsync(() => {
     expect(dynamicSize._stretch).toBe(false);
     testHost.stretch = true;
+    fixture.changeDetectorRef.markForCheck();
     fixture.detectChanges();
+    flush();
     expect(dynamicSize._stretch).toBe(true);
-  });
+  }));
 
   it('keeps name unused except as an ngOnChanges trigger', fakeAsync(() => {
     const updateSpy = spyOn(dynamicSize._scrollStrategy, 'updateItemAndBufferSize').and.callThrough();
