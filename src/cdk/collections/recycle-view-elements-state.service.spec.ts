@@ -35,19 +35,26 @@ describe('RecycleViewElementsState', () => {
       expect(stateService.has('card-1')).toBe(true);
     });
 
-    it('subscribe() emits the current value immediately and undefined after remove()', () => {
+    it('subscribe() emits before state exists, follows updates, and completes after remove()', () => {
       const emissions: Array<Record<string, unknown> | undefined> = [];
-      stateService.add('card-1', {dragged: true});
-
-      const subscription = stateService.subscribe('card-1').subscribe(value => {
-        emissions.push(value);
+      let hasCompleted = false;
+      const subscription = stateService.subscribe('card-1').subscribe({
+        next: value => emissions.push(value),
+        complete: () => (hasCompleted = true),
       });
 
+      stateService.add('card-1', {dragged: true});
       stateService.add('card-1', {offset: 4});
       const removed = stateService.remove('card-1');
 
       expect(removed).toBe(true);
-      expect(emissions).toEqual([{dragged: true}, {dragged: true, offset: 4}, undefined]);
+      expect(emissions).toEqual([
+        undefined,
+        {dragged: true},
+        {dragged: true, offset: 4},
+        undefined,
+      ]);
+      expect(hasCompleted).toBe(true);
       expect(stateService.has('card-1')).toBe(false);
       subscription.unsubscribe();
     });
@@ -74,7 +81,7 @@ describe('RecycleViewElementsState', () => {
       subscription.unsubscribe();
     });
 
-    it('records sourceId only after a retained view exists or on the first synchronous mark', () => {
+    it('drops a later sourceId while an id is marked without a retained view', () => {
       stateService.markForDetach('row-1');
       stateService.markForDetach('row-1', 'cell-a');
 
@@ -89,10 +96,32 @@ describe('RecycleViewElementsState', () => {
         .toBe(true);
     });
 
+    it('records sourceId when the first mark synchronously retains a view', () => {
+      const retainedView = createFakeView('synchronous');
+      const subscription = stateService.detachChanges.subscribe(event => {
+        if (event.type === 'mark' && event.id === 'row-1') {
+          stateService.retainDetachedView('row-1', retainedView, 'repeater-1', 'group-1');
+        }
+      });
+
+      stateService.markForDetach('row-1', 'cell-a');
+      stateService.markForDetach('row-1', 'cell-b');
+      stateService.unmarkForDetach('row-1', 'cell-b');
+
+      expect(stateService.takeDetachedView('row-1')?.view).toBe(retainedView);
+      expect(stateService.isMarkedForDetach('row-1')).toBe(true);
+
+      stateService.unmarkForDetach('row-1', 'cell-a');
+      expect(stateService.takeDetachedView('row-1')).toBeNull();
+      expect(retainedView.destroy).not.toHaveBeenCalled();
+      subscription.unsubscribe();
+    });
+
     it('keeps a retained entry until every recorded sourceId is released', () => {
       const retainedView = createFakeView('owned');
-      stateService.markForDetach('row-1', 'cell-a');
+      stateService.markForDetach('row-1');
       stateService.retainDetachedView('row-1', retainedView, 'repeater-1', 'group-1');
+      stateService.markForDetach('row-1', 'cell-a');
       stateService.markForDetach('row-1', 'cell-b');
 
       stateService.unmarkForDetach('row-1', 'cell-a');
@@ -118,6 +147,23 @@ describe('RecycleViewElementsState', () => {
         .withContext('JSDoc claims destroy; current implementation does not')
         .not.toHaveBeenCalled();
     });
+
+    it('remove() releases only the specified sourceId', () => {
+      const retainedView = createFakeView('removed-owner');
+      stateService.markForDetach('row-1');
+      stateService.retainDetachedView('row-1', retainedView, 'repeater-1', 'group-1');
+      stateService.markForDetach('row-1', 'cell-a');
+      stateService.markForDetach('row-1', 'cell-b');
+
+      expect(stateService.remove('row-1', 'cell-a')).toBe(false);
+      expect(stateService.takeDetachedView('row-1')?.view).toBe(retainedView);
+      expect(stateService.isMarkedForDetach('row-1')).toBe(true);
+
+      expect(stateService.remove('row-1', 'cell-b')).toBe(false);
+      expect(stateService.takeDetachedView('row-1')).toBeNull();
+      expect(stateService.isMarkedForDetach('row-1')).toBe(false);
+      expect(retainedView.destroy).not.toHaveBeenCalled();
+    });
   });
 
   describe('retain, take, and cleanup', () => {
@@ -137,11 +183,18 @@ describe('RecycleViewElementsState', () => {
       expect(retainedView.destroy).not.toHaveBeenCalled();
     });
 
-    it('retainDetachedView destroys a different previous view and copies sourceIds', () => {
+    it('retainDetachedView destroys a different previous view and preserves sourceIds', () => {
       const firstView = createFakeView('first');
       const secondView = createFakeView('second');
+      const subscription = stateService.detachChanges.subscribe(event => {
+        if (event.type === 'mark' && event.id === 'row-1') {
+          stateService.retainDetachedView('row-1', firstView, 'repeater-1', 'group-1');
+        }
+      });
+
       stateService.markForDetach('row-1', 'cell-a');
-      stateService.retainDetachedView('row-1', firstView, 'repeater-1', 'group-1');
+      stateService.markForDetach('row-1', 'cell-b');
+
       stateService.retainDetachedView('row-1', secondView, 'repeater-2', 'group-2');
 
       expect(firstView.destroy).toHaveBeenCalledTimes(1);
@@ -151,9 +204,14 @@ describe('RecycleViewElementsState', () => {
         groupId: 'group-2',
       });
 
+      stateService.unmarkForDetach('row-1', 'cell-b');
+      expect(stateService.takeDetachedView('row-1')?.view).toBe(secondView);
+      expect(stateService.isMarkedForDetach('row-1')).toBe(true);
+
       stateService.unmarkForDetach('row-1', 'cell-a');
       expect(stateService.takeDetachedView('row-1')).toBeNull();
       expect(secondView.destroy).not.toHaveBeenCalled();
+      subscription.unsubscribe();
     });
 
     it('removeDetachedViewsByGroupId matches entry.groupId or the trackBy key and does not destroy', () => {
@@ -221,7 +279,11 @@ describe('RecycleViewElementsState', () => {
       stateService.add('card-1', {dragged: true});
       stateService.retainDetachedView('row-1', retainedView);
       const eventSub = stateService.detachChanges.subscribe(event => events.push(event));
-      const stateSub = stateService.subscribe('card-1').subscribe(value => states.push(value));
+      let hasStateCompleted = false;
+      const stateSub = stateService.subscribe('card-1').subscribe({
+        next: value => states.push(value),
+        complete: () => (hasStateCompleted = true),
+      });
 
       stateService.clear();
 
@@ -230,6 +292,7 @@ describe('RecycleViewElementsState', () => {
       expect(stateService.getDetachedIds()).toEqual([]);
       expect(events).toEqual([{type: 'clear'}]);
       expect(states[0]).toEqual({dragged: true});
+      expect(hasStateCompleted).toBe(true);
       expect(stateService.has('card-1')).toBe(false);
       eventSub.unsubscribe();
       stateSub.unsubscribe();

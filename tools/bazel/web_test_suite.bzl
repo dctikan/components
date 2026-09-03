@@ -7,6 +7,7 @@ def _web_test(name, tags = [], deps = [], bootstrap = [], **kwargs):
         srcs = ["//src:build-tsconfig"],
         bootstrap = bootstrap,
         deps = deps,
+        sources_content = True,
         config = {
             "resolveExtensions": [".js"],
             "tsconfig": "./src/bazel-tsconfig-build.json",
@@ -34,11 +35,9 @@ def ng_web_test_suite(deps = [], static_css = [], **kwargs):
     bootstrap = []
 
     # Workaround for https://github.com/bazelbuild/rules_typescript/issues/301
-    # Since some of our tests depend on CSS files which are not part of the `ng_project` rule,
-    # we need to somehow load static CSS files within Karma (e.g. overlay prebuilt). Those styles
-    # are required for successful test runs. Since the `karma_web_test_suite` rule currently only
-    # allows JS files to be included and served within Karma, we need to create a JS file that
-    # loads the given CSS file.
+    # Since some tests depend on CSS files which are not part of the `ng_project` rule, load those
+    # styles through generated JavaScript because the browser test bundle cannot load static CSS
+    # directly.
     for css_label in static_css:
         css_id = "static-css-file-%s" % (css_label.replace("/", "_").replace(":", "-"))
         bootstrap.append(":%s" % css_id)

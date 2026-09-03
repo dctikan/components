@@ -68,7 +68,9 @@ describe('fixed-parent / dynamic-child visibleRange fixture', () => {
         )
         .toEqual({start: 0, end: 6});
       expect(insideChild.rowindex).toBeLessThanOrEqual(testHost.parentVisible.range.end);
-      expect(insideChild.viewport.getRenderedRange()).toEqual({start: 1, end: 3});
+      const afterRange = insideChild.viewport.getRenderedRange();
+      expect(afterRange).not.toEqual(beforeRange);
+      expect(afterRange).toEqual({start: 0, end: 4});
     }));
 
     it('does not update a child whose rowindex is greater than the inclusive coordination end', fakeAsync(() => {
@@ -120,7 +122,7 @@ function createOutsideNestedRow(coordinationRange: {
   end: number;
 }): NestedRowComponent {
   const outsideFixture = TestBed.createComponent(NestedRowComponent);
-  outsideFixture.componentInstance.visibleRange = coordinationRange;
+  outsideFixture.componentInstance.coordinationRange = coordinationRange;
   outsideFixture.componentInstance.rowindex = coordinationRange.end + 1;
   finishInit(outsideFixture);
   return outsideFixture.componentInstance;
@@ -134,7 +136,7 @@ function createOutsideNestedRow(coordinationRange: {
         orientation="horizontal"
         dynamicSize
         [sizes]="columnSizes"
-        [visibleRange]="visibleRange"
+        [visibleRange]="coordinationRange"
         [rowindex]="rowindex"
         [disableAppending]="true"
         [minBufferPx]="0"
@@ -160,7 +162,7 @@ class NestedRowComponent {
   @ViewChild(CdkVirtualScrollViewport, {static: true}) viewport: CdkVirtualScrollViewport;
   @ViewChild(CdkDynamicSizeVirtualScroll, {static: true}) dynamicSize: CdkDynamicSizeVirtualScroll;
 
-  @Input() visibleRange: {start: number; end: number} | null = null;
+  @Input() coordinationRange: {start: number; end: number} | null = null;
   @Input() rowindex = 0;
 
   cells = [0, 1, 2, 3, 4, 5];
@@ -181,7 +183,7 @@ class NestedRowComponent {
         [style.width.px]="160">
       <nested-row
           *cdkVirtualFor="let row of rows; let rowIndex = index; templateCacheSize: 0"
-          [visibleRange]="visibleRangeRef.range"
+          [coordinationRange]="visibleRangeRef.range"
           [rowindex]="rowIndex">
       </nested-row>
     </cdk-virtual-scroll-viewport>
