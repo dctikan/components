@@ -791,11 +791,13 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
             testComponent,
             viewport,
           );
-          expect(renderedState.firstVisibleIndex).toBe(1);
-          expect(renderedState.start).toBeGreaterThan(0);
-          expect(renderedState.contentOffset).toBe(
-            renderedState.start === 1 ? 200 : renderedState.contentOffset,
-          );
+          expectRenderedState(renderedState, {
+            start: 1,
+            end: 6,
+            itemsIds: ['1', '2', '3', '4', '5'],
+            firstVisibleIndex: 1,
+            contentOffset: 200,
+          });
         }));
 
         it('sets wrapper height to 100% when stretch is true and content is shorter', fakeAsync(() => {
@@ -921,8 +923,13 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
             testComponent,
             viewport,
           );
-          expect(renderedState.itemsIds.length).toBeGreaterThan(0);
-          expect(Number.isFinite(renderedState.scrollOffset)).toBe(true);
+          expectRenderedState(renderedState, {
+            start: 0,
+            end: 3,
+            itemsIds: ['0', '1', '2'],
+          });
+          expect(renderedState.itemsIds).not.toContain('3');
+          expect(renderedState.itemsIds).not.toContain('5');
         }));
 
         it('does not throw when sizes contain NaN or a negative number', fakeAsync(() => {
