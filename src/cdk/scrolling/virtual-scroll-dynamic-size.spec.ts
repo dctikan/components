@@ -953,10 +953,6 @@ describe('CdkVirtualScrollViewport with CdkDynamicSizeVirtualScrollStrategy', ()
         }));
       });
     });
-    // #2890
-    // describe('two directional virtual scroll', () => {});
-    // describe('table of virtual scrolls (one direction)', () => {});
-    // describe('renderedRange specs')', () => {});
   });
 
   describe('item growth and browser scroll anchoring', () => {
