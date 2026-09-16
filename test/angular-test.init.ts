@@ -23,8 +23,8 @@ import {
     {
       provide: ErrorHandler,
       useValue: {
-        handleError: (e: any) => {
-          throw e;
+        handleError: (error: unknown) => {
+          throw error;
         },
       },
     },
@@ -40,7 +40,26 @@ TestBed.initTestEnvironment(
   platformBrowserDynamicTesting(),
 );
 
-(window as any).module = {};
-(window as any).isNode = false;
-(window as any).isBrowser = true;
-(window as any).global = window;
+Object.assign(window, {
+  module: {},
+  isNode: false,
+  isBrowser: true,
+  global: window,
+});
+
+const manualTestFile = new URLSearchParams(window.location.search).get('wtr-test-file');
+
+if (manualTestFile?.includes('wtr-manual-session=true')) {
+  const originalConsoleLog = console.log.bind(console);
+
+  console.log = (...values: unknown[]) => {
+    if (values.length === 1 && typeof values[0] === 'string' && values[0].includes('\x1b[')) {
+      for (const reportLine of values[0].replace(/\x1b\[[0-9;]*m/g, '').split('\n')) {
+        originalConsoleLog(reportLine);
+      }
+      return;
+    }
+
+    originalConsoleLog(...values);
+  };
+}

@@ -1,209 +1,96 @@
 # CDK Development Guide
 
-This guide covers setting up your development environment for working on the Angular CDK (Component Dev Kit) and using the live-reload development workflow.
+This repository is the development source for the published `@nomad2102npm/cdk` package.
 
-## Initial Setup
+Consumers execute the **installed npm package**, not this repository's TypeScript directly. Editing files under `src/` does nothing to a target project until `watch-and-sync-cdk.sh` replaces `<target>/node_modules/@nomad2102npm/cdk`.
 
-### Prerequisites
-1. **Node.js** - Install Node.js (we recommend using `nvm` to manage versions)
-2. **pnpm 9+** - This project uses pnpm as its package manager
-   ```bash
-   npm install -g pnpm@9
-   ```
+Unqualified statements below are current behavior. Script defects are labeled **Current state**. Do not treat those defects as the intended end state.
 
-### Installation Steps
+## Prerequisites
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/angular/components.git
-   cd components
-   ```
+1. Node.js and `pnpm@9` (needed for ibazel / Bazel)
+2. The target project already has `node_modules` (`npm ci` or `npm install` in that project)
+3. Optional: `fswatch` (`brew install fswatch`) so the script does not use BSD `stat` polling
 
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
+## Watch And Sync
 
-3. **Verify installation**
-   ```bash
-   pnpm dev-app
-   ```
-   This should start a local development server at http://localhost:4200
+Run the script from the repository root. The file lives next to this guide, not under `scripts/`.
 
-For more details on the general development setup, see [DEV_ENVIRONMENT.md](./DEV_ENVIRONMENT.md).
-
-## CDK Live Development Workflow
-
-### Using the watch-and-sync-cdk.sh Script
-
-The `watch-and-sync-cdk.sh` script enables a powerful development workflow where changes to the CDK source code are automatically built and synced to a target project. This is ideal for testing CDK changes in real-time within an actual Angular application.
-
-#### How It Works
-
-The script:
-1. Builds the CDK using `ibazel` (Bazel's watch mode) in the `components` project
-2. Watches for changes to the built output
-3. Automatically syncs the built CDK to your target project's `node_modules/@angular/cdk` folder
-4. Allows you to see your CDK changes immediately in your target application
-
-#### Prerequisites
-
-1. **ibazel** - Already included in project dependencies (installed via `pnpm install`)
-2. **fswatch** (optional, but recommended for better performance)
-   ```bash
-   brew install fswatch  # macOS
-   ```
-   If not installed, the script will fall back to polling mode.
-
-3. **Target project** - An Angular project where you want to test your CDK changes
-   - The target project must have `@angular/cdk` installed
-   - Run `npm install` or `pnpm install` in your target project first
-
-#### Usage
+**Current state:** the script header still says `./scripts/watch-and-sync-cdk.sh`. That path does not exist. Use the command below.
 
 ```bash
-./watch-and-sync-cdk.sh /absolute/path/to/your/target/project
+./watch-and-sync-cdk.sh /absolute/path/to/target/project
 ```
 
-**Example:**
-```bash
-./watch-and-sync-cdk.sh /Users/username/projects/my-angular-app
+The destination is always:
+
+```text
+<target>/node_modules/@nomad2102npm/cdk
 ```
 
-#### What Happens
+It is not `node_modules/@angular/cdk`.
 
-Once running, you'll see:
-- Initial build progress from `ibazel`
-- File watcher status
-- Sync confirmations with timestamps whenever the CDK is rebuilt
+Treat the local build as loaded only after the script prints:
 
-```
-========================================
-  CDK Watch & Sync Script
-========================================
-
-Project root: /path/to/components
-Target project: /path/to/my-angular-app
-
-Getting bazel output path...
-Bazel bin: /path/to/components/bazel-bin
-CDK output: /path/to/components/bazel-bin/src/cdk/npm_package
-
-Starting file watcher...
-Using fswatch for efficient file watching
-
-========================================
-  Starting ibazel build...
-========================================
-Press Ctrl+C to stop
+```text
+Synced CDK to <target>/node_modules/@nomad2102npm/cdk
 ```
 
-Every time you save a change in the CDK source:
-1. `ibazel` automatically rebuilds the affected parts
-2. The script detects the new build output
-3. The built CDK is copied to your target project's `node_modules/@angular/cdk`
-4. Your target application's dev server (if running) should pick up the changes
+Do not assume the target sees a new build while the script still prints `Waiting for initial build...`.
 
-#### Development Workflow
+### What The Script Does Now
 
-**Recommended workflow:**
+1. Requires one argument and that `<target>` and `<target>/node_modules` exist
+2. Resolves Bazel output with `pnpm -s bazel info bazel-bin`
+3. Watches `<bazel-bin>/src/cdk/npm_package`
+4. Runs `pnpm ibazel build //src/cdk:npm_package --config=snapshot-build`
+5. On each detected output change: `rm -rf` the installed package, then `cp -R` the Bazel output onto `@nomad2102npm/cdk`
 
-1. Start the watch-and-sync script in one terminal:
-   ```bash
-   ./watch-and-sync-cdk.sh /path/to/your/app
-   ```
+Verified early exits (exit `1`):
 
-2. In a separate terminal, start your target application's dev server:
-   ```bash
-   cd /path/to/your/app
-   ng serve
-   # or
-   npm start
-   ```
+- no argument: `Error: Please provide the target project path` and `Usage: ./watch-and-sync-cdk.sh /absolute/path/to/target/project`
+- missing directory: `Error: Target project directory does not exist: <path>`
+- missing `node_modules`: `Error: node_modules not found in target project. Run 'npm install' first.`
 
-3. Make changes to CDK source files in the `components` project
+### Current Script Risks
 
-4. Watch as:
-   - The CDK rebuilds automatically
-   - The script syncs the changes
-   - Your app's dev server reloads with the new CDK code
+- **Non-atomic replace.** The installed package is deleted before the copy. An interrupt between those steps leaves `@nomad2102npm/cdk` missing. Recover by rerunning the script or reinstalling the package in the target.
+- **Weak target checks.** The script does not require that `@nomad2102npm/cdk` already exist; any directory with `node_modules` is accepted.
+- **Current state:** `cp -R` fails unless `node_modules/@nomad2102npm` already exists. The script does not `mkdir -p` that scoped parent. A target that only has empty `node_modules` is accepted, then copy fails with `No such file or directory`.
+- **Watcher health is not monitored.** If `fswatch` or the polling loop dies, ibazel can keep running without sync.
+- **Cleanup is incomplete.** Only `SIGINT` and `SIGTERM` are trapped. There is no `EXIT` trap.
+- **Current state:** `SIGINT` while the script is blocked on `pnpm ibazel` does not run `cleanup` and does not print `Shutting down...`. The process can stay up.
+- **Polling is macOS-shaped.** The fallback uses `stat -f "%m"` on the Bazel output **directory**. Linux polling is unreliable without `fswatch`. In-place file overwrites may not change directory mtime, so polling may miss a rebuild that does not recreate the tree.
+- **No rollback.** A bad copy overwrites the previously installed package in place.
 
-#### Stopping the Script
+### Recovery
 
-Press `Ctrl+C` to stop both the file watcher and the `ibazel` build process.
+1. Stop the script. **Current state:** `Ctrl+C` / `SIGINT` may not run cleanup while ibazel is blocking; stop leftover processes if the script stays up.
+2. If `<target>/node_modules/@nomad2102npm/cdk` is missing or half-copied, reinstall the package in the target (`npm ci` or `npm install`)
+3. Confirm the destination folder is `@nomad2102npm/cdk`, then start watch-and-sync again and wait for `Synced CDK to ...`
 
-#### Troubleshooting
+## Prove Which Package Is Loaded
 
-**Target project not found:**
-- Ensure you provide an absolute path to your target project
-- The path should be the root of your Angular project (where `package.json` is located)
+After a published install, the package lives at `<target>/node_modules/@nomad2102npm/cdk`. The published install `name` is `@nomad2102npm/cdk`.
 
-**node_modules not found:**
-- Run `npm install` or `pnpm install` in your target project first
-- Make sure `@angular/cdk` is installed in the target project
+The Bazel `npm_package` / `src/cdk/package.json` `name` is `@angular/cdk`. That name appears only after a local `npm_package` copy, not after a fresh install from the registry.
 
-**Slow syncing:**
-- Install `fswatch` for better performance:
-  ```bash
-  brew install fswatch  # macOS
-  apt-get install fswatch  # Linux
-  ```
+Watch-and-sync replaces only `node_modules/@nomad2102npm/cdk`. If the target also has `node_modules/@angular/cdk`, that path is not updated. After a successful local sync, the `@nomad2102npm/cdk` path stays the same and file mtimes / copied contents change.
 
-**Changes not appearing:**
-- Check that your target app's dev server is running
-- Try restarting the dev server
-- Verify the sync messages in the watch-and-sync terminal
-
-### Building CDK for Release
-
-For a one-time build (without watch mode):
+## Characterization Tests
 
 ```bash
-pnpm build
+node --test watch-and-sync-cdk.test.cjs
 ```
 
-The output will be in `dist/releases/@angular/cdk`.
+`watch-and-sync-cdk.test.cjs` locks current script behavior: argument handling, paths with spaces, destination package name, first and repeated sync, copied-file existence, `SIGINT` while blocked on ibazel (cleanup does not run), and the non-atomic `rm` then `cp` order.
 
-### Running CDK Tests
+If those tests fail after a script edit, stop. Keep these tests as the regression net.
 
-```bash
-# Run all CDK tests
-pnpm test cdk
+## Platform
 
-# Run specific CDK package tests
-pnpm test src/cdk/collections
-pnpm test src/cdk/overlay
-```
+The script is Bash.
 
-## Platform-Specific Notes
-
-### macOS / Linux
-The `watch-and-sync-cdk.sh` script is designed for Unix-like systems (macOS, Linux) and uses bash-specific features.
-
-### Windows
-**⚠️ Development on Windows requires additional research**
-
-The `watch-and-sync-cdk.sh` script uses bash and Unix-specific commands that are not natively compatible with Windows. Potential options for Windows users:
-
-1. **Windows Subsystem for Linux (WSL)** - Recommended approach
-   - Install WSL following the [official guide](https://learn.microsoft.com/en-us/windows/wsl/install)
-   - Run the entire development workflow within WSL
-   - See [DEV_ENVIRONMENT.md](./DEV_ENVIRONMENT.md) for more details
-
-2. **Git Bash** or **WSL2** - May work but not tested
-   - The script might work in Git Bash or WSL2
-   - Requires further testing and validation
-
-3. **Manual sync** - Fallback option
-   - Build the CDK manually: `pnpm bazel build //src/cdk:npm_package --config=snapshot-build`
-   - Copy from `bazel-bin/src/cdk/npm_package` to your target project's `node_modules/@angular/cdk`
-   - Repeat after each change (tedious but reliable)
-
-If you're working on Windows and find a good solution, please consider contributing documentation!
-
-## Additional Resources
-
-- [Main Development Guide](./DEV_ENVIRONMENT.md)
-- [Contributing Guidelines](./CONTRIBUTING.md)
-- [Coding Standards](./CODING_STANDARDS.md)
-- [CDK Documentation](https://material.angular.dev/cdk/categories)
+- macOS: supported. Prefer `fswatch`.
+- Linux: use `fswatch`; do not trust the BSD `stat` polling fallback.
+- Windows: not supported natively. WSL is the only plausible path; it is untested here.
