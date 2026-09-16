@@ -480,7 +480,7 @@ export class _RecycleViewRepeaterStrategy<T, R, C extends _ViewRepeaterItemConte
         }
 
         const localIndex = this._findRenderedViewIndexByTrackById(trackById);
-        if (localIndex) return;
+        if (localIndex !== null) return;
 
         const {view} = entry;
         const realIndex = this._itemsTrackByIds.indexOf(trackById);

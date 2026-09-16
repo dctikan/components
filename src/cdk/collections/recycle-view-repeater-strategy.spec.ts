@@ -215,7 +215,7 @@ describe('_RecycleViewRepeaterStrategy', () => {
     strategy.detach();
   });
 
-  it('development source reattach at local index 0 does not treat 0 as already rendered', () => {
+  it('does not reinsert a retained view already rendered at local index 0', () => {
     const {fixture, strategy, differs, stateService} = createHarness(true);
     const host = fixture.componentInstance;
     const firstItems = [{key: 'cell-0', label: 'zero'}];
@@ -232,16 +232,8 @@ describe('_RecycleViewRepeaterStrategy', () => {
 
     stateService!.notifyInsert('group-1');
 
-    expect(host.container.length)
-      .withContext(
-        'guard is still if (localIndex); insert-of-attached does not duplicate; insert WAS invoked because 0 is falsy',
-      )
-      .toBe(1);
-    expect(insertSpy)
-      .withContext(
-        'guard is still if (localIndex); insert-of-attached does not duplicate; insert WAS invoked because 0 is falsy',
-      )
-      .toHaveBeenCalled();
+    expect(host.container.length).toBe(1);
+    expect(insertSpy).not.toHaveBeenCalled();
     strategy.detach();
   });
 
