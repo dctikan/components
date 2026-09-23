@@ -4,6 +4,7 @@
 
 ```ts
 
+import { EmbeddedViewRef } from '@angular/core';
 import * as i0 from '@angular/core';
 import { IterableChangeRecord } from '@angular/core';
 import { IterableChanges } from '@angular/core';
@@ -53,11 +54,88 @@ export type ListRange = {
     end: number;
 };
 
+// @public (undocumented)
+export type RecycleViewDetachEvent = {
+    type: 'mark';
+    id: string;
+} | {
+    type: 'clear';
+} | {
+    type: 'collect' | 'insert';
+    collectDetached: string;
+};
+
+// @public
+export class RecycleViewElementsState implements OnDestroy {
+    // (undocumented)
+    add(id: string, state: Record<string, unknown>): void;
+    // (undocumented)
+    clear(): void;
+    // (undocumented)
+    collectDetachedViews(collectDetached: string): void;
+    // (undocumented)
+    readonly detachChanges: Observable<RecycleViewDetachEvent>;
+    // (undocumented)
+    get<T extends Record<string, unknown> = Record<string, unknown>>(id: string): T | undefined;
+    // (undocumented)
+    getDetachedIds(): string[];
+    // (undocumented)
+    has(id: string): boolean;
+    // (undocumented)
+    isMarkedForDetach(id: string): boolean;
+    // (undocumented)
+    markForDetach(id: string, sourceId?: string): void;
+    // (undocumented)
+    ngOnDestroy(): void;
+    // (undocumented)
+    notifyInsert(collectDetached: string): void;
+    // (undocumented)
+    remove(id: string, sourceId?: string): boolean;
+    // (undocumented)
+    removeDetachedViewsByGroupId(groupId?: string | null): void;
+    // (undocumented)
+    removeDetachedViewsByRepeaterId(repeaterId?: string | null): void;
+    // (undocumented)
+    retainDetachedView(id: string, view: EmbeddedViewRef<unknown>, repeaterId?: string | null, groupId?: string | null): void;
+    // (undocumented)
+    subscribe<T extends Record<string, unknown> = Record<string, unknown>>(id: string): Observable<T | undefined>;
+    // (undocumented)
+    takeDetachedView<T>(id: string): {
+        view: EmbeddedViewRef<T>;
+        repeaterId: string | null;
+        groupId: string | null;
+    } | null;
+    // (undocumented)
+    unmarkForDetach(id: string, sourceId?: string): void;
+    // (undocumented)
+    static ɵfac: i0.ɵɵFactoryDeclaration<RecycleViewElementsState, never>;
+    // (undocumented)
+    static ɵprov: i0.ɵɵInjectableDeclaration<any>;
+}
+
 // @public
 export class _RecycleViewRepeaterStrategy<T, R, C extends _ViewRepeaterItemContext<T>> implements _ViewRepeater<T, R, C> {
+    constructor();
     applyChanges(changes: IterableChanges<R>, viewContainerRef: ViewContainerRef, itemContextFactory: _ViewRepeaterItemContextFactory<T, R, C>, itemValueResolver: _ViewRepeaterItemValueResolver<T, R>, itemViewChanged?: _ViewRepeaterItemChanged<R, C>): void;
     // (undocumented)
     detach(): void;
+    // (undocumented)
+    setCollectDetached(value: string | null): void;
+    // (undocumented)
+    setGroupId(value: string | null): void;
+    // (undocumented)
+    setItemsTrackByIds(ids: string[]): void;
+    // (undocumented)
+    setRenderedRange(range: {
+        start: number;
+        end: number;
+    }): void;
+    // (undocumented)
+    setRepeaterId(value: string | null): void;
+    // (undocumented)
+    setStoreScrollPosition(value: boolean): void;
+    // (undocumented)
+    setTrackByFunction(trackBy: ((index: number, item: T) => unknown) | undefined): void;
     viewCacheSize: number;
 }
 

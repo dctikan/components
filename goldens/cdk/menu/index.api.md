@@ -5,6 +5,7 @@
 ```ts
 
 import { AfterContentInit } from '@angular/core';
+import { AfterViewInit } from '@angular/core';
 import { Binding } from '@angular/core';
 import { ComponentRef } from '@angular/core';
 import { DirectiveWithBindings } from '@angular/core';

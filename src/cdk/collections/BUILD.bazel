@@ -30,6 +30,7 @@ ng_project(
     deps = [
         ":collections",
         "//:node_modules/@angular/core",
+        "//:node_modules/rxjs",
     ],
 )
 

@@ -44,6 +44,8 @@ export type CdkVirtualForOfContext<T> = {
   $implicit: T;
   /** The DataSource, Observable, or NgIterable that was passed to *cdkVirtualFor. */
   cdkVirtualForOf: DataSource<T> | Observable<T[]> | NgIterable<T>;
+  /** Identifier associated with this virtual-for instance. */
+  cdkVirtualForId: unknown;
   /** The index of the item in the DataSource. */
   index: number;
   /** The number of items in the DataSource. */
@@ -79,6 +81,7 @@ function getOffset(orientation: 'horizontal' | 'vertical', direction: 'start' | 
  */
 @Directive({
   selector: '[cdkVirtualFor][cdkVirtualForOf]',
+  providers: [_RecycleViewRepeaterStrategy],
 })
 export class CdkVirtualForOf<T>
   implements CdkVirtualScrollRepeater<T>, CollectionViewer, DoCheck, OnDestroy
@@ -86,8 +89,10 @@ export class CdkVirtualForOf<T>
   private _viewContainerRef = inject(ViewContainerRef);
   private _template = inject<TemplateRef<CdkVirtualForOfContext<T>>>(TemplateRef);
   private _differs = inject(IterableDiffers);
-  private _viewRepeater = new _RecycleViewRepeaterStrategy<T, T, CdkVirtualForOfContext<T>>();
-  private _viewport = inject(CDK_VIRTUAL_SCROLL_VIEWPORT, {skipSelf: true});
+  private _viewRepeater = inject<_RecycleViewRepeaterStrategy<T, T, CdkVirtualForOfContext<T>>>(
+    _RecycleViewRepeaterStrategy,
+  );
+  private _viewport = inject(CDK_VIRTUAL_SCROLL_VIEWPORT);
 
   /** Emits when the rendered view of the data changes. */
   readonly viewChange = new Subject<ListRange>();
@@ -124,11 +129,74 @@ export class CdkVirtualForOf<T>
   }
   set cdkVirtualForTrackBy(fn: TrackByFunction<T> | undefined) {
     this._needsUpdate = true;
+    this._userTrackBy = fn;
+    this._viewRepeater.setTrackByFunction(fn);
+    this._fullDataTrackByIds();
     this._cdkVirtualForTrackBy = fn
       ? (index, item) => fn(index + (this._renderedRange ? this._renderedRange.start : 0), item)
       : undefined;
   }
   private _cdkVirtualForTrackBy: TrackByFunction<T> | undefined;
+  private _userTrackBy: TrackByFunction<T> | undefined;
+
+  @Input()
+  get cdkVirtualForStoreScrollPosition(): boolean {
+    return this._storeScrollPosition;
+  }
+  set cdkVirtualForStoreScrollPosition(value: boolean) {
+    this._storeScrollPosition = value;
+    this._viewRepeater.setStoreScrollPosition(value);
+  }
+  private _storeScrollPosition = false;
+
+  @Input()
+  get cdkVirtualForCollectDetached(): string | null {
+    return this._collectDetached;
+  }
+  set cdkVirtualForCollectDetached(value: string | null) {
+    this._collectDetached = value;
+    this._viewRepeater.setCollectDetached(value);
+  }
+  private _collectDetached: string | null = null;
+
+  @Input()
+  get cdkVirtualForRepeaterId(): string | null {
+    return this._repeaterId;
+  }
+  set cdkVirtualForRepeaterId(value: string | null) {
+    this._repeaterId = value;
+    this._viewRepeater.setRepeaterId(value);
+  }
+  private _repeaterId: string | null = null;
+
+  @Input()
+  get cdkVirtualForGroupId(): string | null {
+    return this._groupId;
+  }
+  set cdkVirtualForGroupId(value: string | null) {
+    this._groupId = value;
+    this._viewRepeater.setGroupId(value);
+  }
+  private _groupId: string | null = null;
+
+  @Input()
+  get cdkVirtualForId(): unknown {
+    return this._id;
+  }
+  set cdkVirtualForId(value: unknown) {
+    this._id = value;
+    this._needsUpdate = true;
+  }
+  private _id: unknown;
+
+  private _fullDataTrackByIds(): void {
+    if (!this._userTrackBy) return;
+    const ids = this._data
+      .map((item, index) => this._userTrackBy!(index, item))
+      .filter((id): id is Exclude<typeof id, null | undefined> => id !== null && id !== undefined)
+      .map(String);
+    this._viewRepeater.setItemsTrackByIds(ids);
+  }
 
   /** The template used to stamp out new elements. */
   @Input()
@@ -187,6 +255,7 @@ export class CdkVirtualForOf<T>
 
     this.dataStream.subscribe(data => {
       this._data = data;
+      this._fullDataTrackByIds();
       this._onRenderedDataChange();
     });
     this._viewport.renderedRangeStream.pipe(takeUntil(this._destroyed)).subscribe(range => {
@@ -310,10 +379,12 @@ export class CdkVirtualForOf<T>
 
   /** Update the `CdkVirtualForOfContext` for all views. */
   private _updateContext() {
+    this._viewRepeater.setRenderedRange(this._renderedRange);
     const count = this._data.length;
     let i = this._viewContainerRef.length;
     while (i--) {
       const view = this._viewContainerRef.get(i) as EmbeddedViewRef<CdkVirtualForOfContext<T>>;
+      view.context.cdkVirtualForId = this._id;
       view.context.index = this._renderedRange.start + i;
       view.context.count = count;
       this._updateComputedContextProperties(view.context);
@@ -323,6 +394,7 @@ export class CdkVirtualForOf<T>
 
   /** Apply changes to the DOM. */
   private _applyChanges(changes: IterableChanges<T>) {
+    this._viewRepeater.setRenderedRange(this._renderedRange);
     this._viewRepeater.applyChanges(
       changes,
       this._viewContainerRef,
@@ -347,6 +419,7 @@ export class CdkVirtualForOf<T>
     let i = this._viewContainerRef.length;
     while (i--) {
       const view = this._viewContainerRef.get(i) as EmbeddedViewRef<CdkVirtualForOfContext<T>>;
+      view.context.cdkVirtualForId = this._id;
       view.context.index = this._renderedRange.start + i;
       view.context.count = count;
       this._updateComputedContextProperties(view.context);
@@ -376,6 +449,7 @@ export class CdkVirtualForOf<T>
         // It's guaranteed that the iterable is not "undefined" or "null" because we only
         // generate views for elements if the "cdkVirtualForOf" iterable has elements.
         cdkVirtualForOf: this._cdkVirtualForOf!,
+        cdkVirtualForId: this._id,
         index: -1,
         count: -1,
         first: false,
