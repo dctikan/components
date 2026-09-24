@@ -1,3 +1,11 @@
+/**
+ * @license
+ * Copyright Google LLC All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.dev/license
+ */
+
 import {ChangeDetectorRef, Directive, inject, OnDestroy} from '@angular/core';
 import {merge, Subscription} from 'rxjs';
 import {CdkFixedSizeVirtualScroll} from './fixed-size-virtual-scroll';

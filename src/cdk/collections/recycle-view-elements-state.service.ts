@@ -1,3 +1,11 @@
+/**
+ * @license
+ * Copyright Google LLC All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.dev/license
+ */
+
 import {EmbeddedViewRef, Injectable, OnDestroy} from '@angular/core';
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
 
@@ -21,7 +29,7 @@ export class RecycleViewElementsState implements OnDestroy {
   private _detachedIds = new Set<string>();
   private _detachedViews = new Map<string, DetachedEntry>();
   private _detachChanges = new Subject<RecycleViewDetachEvent>();
-  readonly detachChanges: Observable<RecycleViewDetachEvent> = this._detachChanges.asObservable();
+  readonly detachChanges: Observable<RecycleViewDetachEvent> = this._detachChanges;
 
   add(id: string, state: Record<string, unknown>): void {
     const merged = {...this._stateMap.get(id), ...state};
@@ -50,7 +58,7 @@ export class RecycleViewElementsState implements OnDestroy {
       subject = new BehaviorSubject(this._stateMap.get(id));
       this._stateSubjects.set(id, subject);
     }
-    return subject.asObservable() as Observable<T | undefined>;
+    return subject as Observable<T | undefined>;
   }
 
   remove(id: string, sourceId?: string): boolean {

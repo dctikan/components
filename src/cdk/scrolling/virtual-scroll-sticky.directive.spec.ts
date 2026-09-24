@@ -20,6 +20,9 @@ describe('CdkVirtualScrollSticky', () => {
     const fixture = TestBed.createComponent(StickyHost);
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    await fixture.whenStable();
     const wrapper = fixture.nativeElement.querySelector(
       '.cdk-virtual-scroll-content-wrapper',
     ) as HTMLElement;
@@ -34,6 +37,9 @@ describe('CdkVirtualScrollSticky', () => {
     const fixture = TestBed.createComponent(StickyHost);
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    await fixture.whenStable();
     const wrapper = fixture.nativeElement.querySelector(
       '.cdk-virtual-scroll-content-wrapper',
     ) as HTMLElement;
@@ -47,6 +53,9 @@ describe('CdkVirtualScrollSticky', () => {
   it('does not repeat the historical stale-top defect when switching to horizontal translation', async () => {
     const fixture = TestBed.createComponent(StickyHost);
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    await new Promise(resolve => requestAnimationFrame(resolve));
     await fixture.whenStable();
     const wrapper = fixture.nativeElement.querySelector(
       '.cdk-virtual-scroll-content-wrapper',

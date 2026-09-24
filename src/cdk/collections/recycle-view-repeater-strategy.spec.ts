@@ -15,7 +15,7 @@ type Context = {$implicit: Item};
 
 @Component({
   template:
-    '<ng-container #host></ng-container><ng-template #item let-item><div class="root"><div class="cdk-virtual-scrollable" style="overflow: auto">{{item.key}}</div></div></ng-template>',
+    '<ng-container #host></ng-container><ng-template #item let-item><div class="root"><div class="cdk-virtual-scrollable" style="overflow: auto; width: 20px; height: 20px"><div style="width: 200px; height: 200px">{{item.key}}</div></div></div></ng-template>',
 })
 class Host {
   @ViewChild('host', {read: ViewContainerRef, static: true}) container!: ViewContainerRef;
@@ -146,6 +146,7 @@ describe('_RecycleViewRepeaterStrategy keyed behavior', () => {
       '.cdk-virtual-scrollable',
     ) as HTMLElement;
     scrollable.scrollTop = 42;
+    expect(scrollable.scrollTop).toBe(42);
     apply([item], []);
     expect(state.get('column')).toEqual({scrollPosition: {scrollTop: 42, scrollLeft: 0}});
     const callbacks: FrameRequestCallback[] = [];
@@ -169,6 +170,8 @@ describe('_RecycleViewRepeaterStrategy keyed behavior', () => {
     ) as HTMLElement;
     scrollable.scrollTop = 42;
     scrollable.scrollLeft = 13;
+    expect(scrollable.scrollTop).toBe(42);
+    expect(scrollable.scrollLeft).toBe(13);
     apply([previous], []);
 
     const callbacks: FrameRequestCallback[] = [];
@@ -219,6 +222,8 @@ describe('_RecycleViewRepeaterStrategy keyed behavior', () => {
     root.scrollTop = 99;
     nested.scrollTop = 42;
     nested.scrollLeft = 13;
+    expect(nested.scrollTop).toBe(42);
+    expect(nested.scrollLeft).toBe(13);
     apply([item], []);
     expect(state.get('nested')).toEqual({scrollPosition: {scrollTop: 42, scrollLeft: 13}});
 

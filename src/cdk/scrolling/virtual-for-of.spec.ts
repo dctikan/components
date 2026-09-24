@@ -12,6 +12,9 @@ describe('CdkVirtualForOf in nested viewports', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     await fixture.whenStable();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    await fixture.whenStable();
+    fixture.detectChanges();
 
     const [outer, inner] = fixture.componentInstance.viewports.toArray();
     expect(outer.getDataLength()).toBe(2);
@@ -25,6 +28,9 @@ describe('CdkVirtualForOf keyed inputs', () => {
   it('exposes the full-data trackBy identity and id context while retaining marked views', async () => {
     const fixture = TestBed.createComponent(KeyedVirtualForHost);
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    await new Promise(resolve => requestAnimationFrame(resolve));
     await fixture.whenStable();
     fixture.detectChanges();
     const state = fixture.debugElement.injector.get(RecycleViewElementsState);

@@ -1,4 +1,4 @@
-import {Component, ViewChild} from '@angular/core';
+import {Component, ViewChild, signal} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {dispatchFakeEvent} from '../testing/private';
 import {CdkDynamicSizeVirtualScroll} from './dynamic-size.directive';
@@ -14,6 +14,8 @@ describe('dynamic-size offsets and ranges', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    await fixture.whenStable();
     viewport = fixture.componentInstance.viewport;
   });
 
@@ -28,13 +30,12 @@ describe('dynamic-size offsets and ranges', () => {
 
   it('uses cumulative item sizes for the total size and initial buffered window', () => {
     expect(viewport._totalContentHeight()).toBe('1600px');
+    expect(viewport.getViewportSize()).toBe(600);
     expect(viewport.getRenderedRange()).toEqual({start: 0, end: 4});
   });
 
   it('includes the item ending at an exact buffer boundary and offsets the rendered content', async () => {
-    fixture.componentInstance.disableAppending = true;
-    fixture.changeDetectorRef.markForCheck();
-    fixture.detectChanges();
+    fixture.componentInstance.disableAppending.set(true);
     await fixture.whenStable();
     await scrollTo(600);
 
@@ -44,10 +45,8 @@ describe('dynamic-size offsets and ranges', () => {
   });
 
   it('rebuilds the window when sizes change without changing item count', async () => {
-    fixture.componentInstance.sizes = [200, 400, 200, 400, 100, 100, 200, 200];
-    fixture.componentInstance.disableAppending = true;
-    fixture.changeDetectorRef.markForCheck();
-    fixture.detectChanges();
+    fixture.componentInstance.sizes.set([200, 400, 200, 400, 100, 100, 200, 200]);
+    fixture.componentInstance.disableAppending.set(true);
     await fixture.whenStable();
     await scrollTo(600);
 
@@ -59,9 +58,7 @@ describe('dynamic-size offsets and ranges', () => {
     await scrollTo(1000);
     expect(viewport.getRenderedRange()).toEqual({start: 0, end: 8});
 
-    fixture.componentInstance.disableAppending = true;
-    fixture.changeDetectorRef.markForCheck();
-    fixture.detectChanges();
+    fixture.componentInstance.disableAppending.set(true);
     await fixture.whenStable();
     await scrollTo(1000);
     expect(viewport.getRenderedRange()).toEqual({start: 3, end: 8});
@@ -69,9 +66,7 @@ describe('dynamic-size offsets and ranges', () => {
   });
 
   it('uses the current dynamic-size window after disabling appending and scrolling back', async () => {
-    fixture.componentInstance.disableAppending = true;
-    fixture.changeDetectorRef.markForCheck();
-    fixture.detectChanges();
+    fixture.componentInstance.disableAppending.set(true);
     await fixture.whenStable();
     await scrollTo(1000);
     expect(viewport.getRenderedRange()).toEqual({start: 3, end: 8});
@@ -82,36 +77,32 @@ describe('dynamic-size offsets and ranges', () => {
   });
 
   it('defers scroll-driven range updates for a row outside the parent visible range', async () => {
-    fixture.componentInstance.rowindex = 8;
-    fixture.componentInstance.visibleRange = {start: 0, end: 3};
-    fixture.componentInstance.disableAppending = true;
-    fixture.detectChanges();
+    fixture.componentInstance.rowindex.set(8);
+    fixture.componentInstance.visibleRange.set({start: 0, end: 3});
+    fixture.componentInstance.disableAppending.set(true);
     await fixture.whenStable();
     const before = viewport.getRenderedRange();
 
     await scrollTo(1000);
     expect(viewport.getRenderedRange()).toEqual(before);
 
-    fixture.componentInstance.visibleRange = {start: 7, end: 9};
-    fixture.detectChanges();
+    fixture.componentInstance.visibleRange.set({start: 7, end: 9});
     await fixture.whenStable();
     await scrollTo(600);
     expect(viewport.getRenderedRange()).toEqual({start: 1, end: 7});
   });
 
   it('updates a deferred row when it becomes visible without another child scroll', async () => {
-    fixture.componentInstance.rowindex = 8;
-    fixture.componentInstance.visibleRange = {start: 0, end: 3};
-    fixture.componentInstance.disableAppending = true;
-    fixture.detectChanges();
+    fixture.componentInstance.rowindex.set(8);
+    fixture.componentInstance.visibleRange.set({start: 0, end: 3});
+    fixture.componentInstance.disableAppending.set(true);
     await fixture.whenStable();
     const before = viewport.getRenderedRange();
 
     await scrollTo(1000);
     expect(viewport.getRenderedRange()).toEqual(before);
 
-    fixture.componentInstance.visibleRange = {start: 7, end: 9};
-    fixture.detectChanges();
+    fixture.componentInstance.visibleRange.set({start: 7, end: 9});
     await fixture.whenStable();
     expect(viewport.getRenderedRange()).toEqual({start: 3, end: 8});
     expect(viewport.getOffsetToRenderedContentStart()).toBe(600);
@@ -120,12 +111,12 @@ describe('dynamic-size offsets and ranges', () => {
 
 @Component({
   template: `
-    <cdk-virtual-scroll-viewport dynamicSize [sizes]="sizes"
-        [rowindex]="rowindex" [visibleRange]="visibleRange"
-        [minBufferPx]="100" [maxBufferPx]="200" [disableAppending]="disableAppending"
+    <cdk-virtual-scroll-viewport dynamicSize [sizes]="sizes()"
+        [rowindex]="rowindex()" [visibleRange]="visibleRange()"
+        [minBufferPx]="100" [maxBufferPx]="200" [disableAppending]="disableAppending()"
         [style.height.px]="600" [style.width.px]="300"
         (scrolledIndexChange)="firstVisibleIndex = $event">
-      <div *cdkVirtualFor="let item of items" [style.height.px]="sizes[item]">{{item}}</div>
+      <div *cdkVirtualFor="let item of items" [style.height.px]="sizes()[item]">{{item}}</div>
     </cdk-virtual-scroll-viewport>
   `,
   imports: [CdkVirtualScrollViewport, CdkDynamicSizeVirtualScroll, CdkVirtualForOf],
@@ -133,9 +124,9 @@ describe('dynamic-size offsets and ranges', () => {
 class DynamicSizeHost {
   @ViewChild(CdkVirtualScrollViewport, {static: true}) viewport!: CdkVirtualScrollViewport;
   items = [0, 1, 2, 3, 4, 5, 6, 7];
-  sizes = [200, 200, 200, 200, 200, 200, 200, 200];
-  disableAppending = false;
-  rowindex: number | undefined;
-  visibleRange: {start: number; end: number} | null = null;
+  sizes = signal([200, 200, 200, 200, 200, 200, 200, 200]);
+  disableAppending = signal(false);
+  rowindex = signal<number | undefined>(undefined);
+  visibleRange = signal<{start: number; end: number} | null>(null);
   firstVisibleIndex: number | null = null;
 }

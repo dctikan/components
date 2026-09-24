@@ -95,20 +95,21 @@ describe('CdkVirtualScrollViewport', () => {
         .toEqual({start: 0, end: 4});
     });
 
-    it('retains the visited fixed-size range by default instead of pinning its start to zero', async () => {
+    it('retains the initial fixed-size range when visiting later windows', async () => {
       testComponent.items = Array.from({length: 50}, (_, index) => index);
       testComponent.disableAppending = false;
       await finishInit(fixture);
       await triggerScroll(viewport, 500);
+      expect(viewport.measureScrollOffset()).toBe(500);
       fixture.detectChanges();
       await fixture.whenStable();
-      expect(viewport.getRenderedRange()).toEqual({start: 10, end: 14});
+      expect(viewport.getRenderedRange()).toEqual({start: 0, end: 14});
 
       await triggerScroll(viewport, 1000);
       fixture.detectChanges();
       await fixture.whenStable();
-      expect(viewport.getRenderedRange()).toEqual({start: 10, end: 24});
-      expect(viewport.getOffsetToRenderedContentStart()).toBe(500);
+      expect(viewport.getRenderedRange()).toEqual({start: 0, end: 24});
+      expect(viewport.getOffsetToRenderedContentStart()).toBe(0);
     });
 
     it('shrinks the fixed-size range after disabling appending on an existing viewport', async () => {
@@ -121,7 +122,7 @@ describe('CdkVirtualScrollViewport', () => {
       await triggerScroll(viewport, 1000);
       fixture.detectChanges();
       await fixture.whenStable();
-      expect(viewport.getRenderedRange()).toEqual({start: 10, end: 24});
+      expect(viewport.getRenderedRange()).toEqual({start: 0, end: 24});
 
       testComponent.disableAppending = true;
       fixture.changeDetectorRef.markForCheck();
@@ -144,7 +145,7 @@ describe('CdkVirtualScrollViewport', () => {
       await triggerScroll(viewport, 500);
       fixture.detectChanges();
       await fixture.whenStable();
-      expect(viewport.getRenderedRange()).toEqual({start: 10, end: 24});
+      expect(viewport.getRenderedRange()).toEqual({start: 0, end: 24});
 
       testComponent.disableAppending = true;
       fixture.changeDetectorRef.markForCheck();
@@ -164,7 +165,7 @@ describe('CdkVirtualScrollViewport', () => {
       await triggerScroll(viewport, 1000);
       fixture.detectChanges();
       await fixture.whenStable();
-      expect(viewport.getRenderedRange()).toEqual({start: 10, end: 24});
+      expect(viewport.getRenderedRange()).toEqual({start: 0, end: 24});
 
       testComponent.itemSize = 25;
       fixture.changeDetectorRef.markForCheck();

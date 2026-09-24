@@ -26,7 +26,6 @@ describe('CdkDynamicSizeVirtualScroll', () => {
 
     host.sizes = [40, 80, 120];
     fixture.changeDetectorRef.markForCheck();
-    fixture.detectChanges();
     await fixture.whenStable();
     expect(host.viewport._totalContentHeight()).toBe('240px');
   });
