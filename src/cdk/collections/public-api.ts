@@ -10,6 +10,7 @@ export * from './array-data-source';
 export * from './collection-viewer';
 export * from './data-source';
 export * from './dispose-view-repeater-strategy';
+export * from './recycle-view-elements-state.service';
 export * from './recycle-view-repeater-strategy';
 export * from './selection-model';
 export {

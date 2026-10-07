@@ -95,6 +95,86 @@ describe('CdkVirtualScrollViewport', () => {
         .toEqual({start: 0, end: 4});
     });
 
+    it('retains the initial fixed-size range when visiting later windows', async () => {
+      testComponent.items = Array.from({length: 50}, (_, index) => index);
+      testComponent.disableAppending = false;
+      await finishInit(fixture);
+      await triggerScroll(viewport, 500);
+      expect(viewport.measureScrollOffset()).toBe(500);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(viewport.getRenderedRange()).toEqual({start: 0, end: 14});
+
+      await triggerScroll(viewport, 1000);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(viewport.getRenderedRange()).toEqual({start: 0, end: 24});
+      expect(viewport.getOffsetToRenderedContentStart()).toBe(0);
+    });
+
+    it('shrinks the fixed-size range after disabling appending on an existing viewport', async () => {
+      testComponent.items = Array.from({length: 50}, (_, index) => index);
+      testComponent.disableAppending = false;
+      await finishInit(fixture);
+      await triggerScroll(viewport, 500);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await triggerScroll(viewport, 1000);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(viewport.getRenderedRange()).toEqual({start: 0, end: 24});
+
+      testComponent.disableAppending = true;
+      fixture.changeDetectorRef.markForCheck();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(viewport.getRenderedRange()).toEqual({start: 20, end: 24});
+      expect(viewport.getOffsetToRenderedContentStart()).toBe(1000);
+    });
+
+    it('drops the historical range when disabling appending after scrolling back', async () => {
+      testComponent.items = Array.from({length: 50}, (_, index) => index);
+      testComponent.disableAppending = false;
+      await finishInit(fixture);
+      await triggerScroll(viewport, 500);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await triggerScroll(viewport, 1000);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await triggerScroll(viewport, 500);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(viewport.getRenderedRange()).toEqual({start: 0, end: 24});
+
+      testComponent.disableAppending = true;
+      fixture.changeDetectorRef.markForCheck();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(viewport.getRenderedRange()).toEqual({start: 10, end: 14});
+      expect(viewport.getOffsetToRenderedContentStart()).toBe(500);
+    });
+
+    it('resets the fixed-size historical envelope when the item size changes', async () => {
+      testComponent.items = Array.from({length: 100}, (_, index) => index);
+      testComponent.disableAppending = false;
+      await finishInit(fixture);
+      await triggerScroll(viewport, 500);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      await triggerScroll(viewport, 1000);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(viewport.getRenderedRange()).toEqual({start: 0, end: 24});
+
+      testComponent.itemSize = 25;
+      fixture.changeDetectorRef.markForCheck();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(viewport.getRenderedRange()).toEqual({start: 40, end: 48});
+      expect(viewport.getOffsetToRenderedContentStart()).toBe(1000);
+    });
+
     it('should contract the rendered range when changing to less data', async () => {
       await finishInit(fixture);
 
@@ -1150,7 +1230,7 @@ async function triggerScroll(viewport: CdkVirtualScrollViewport, offset?: number
   template: `
     <cdk-virtual-scroll-viewport
         [itemSize]="itemSize" [minBufferPx]="minBufferPx" [maxBufferPx]="maxBufferPx"
-        [orientation]="orientation" [style.height.px]="viewportHeight"
+        [orientation]="orientation" [disableAppending]="disableAppending" [style.height.px]="viewportHeight"
         [style.width.px]="viewportWidth" (scrolledIndexChange)="scrolledToIndex = $event"
         [class.has-margin]="hasMargin">
       <div class="item"
@@ -1199,6 +1279,7 @@ class FixedSizeVirtualScroll {
   itemSize = 50;
   minBufferPx = 0;
   maxBufferPx = 0;
+  disableAppending = true;
   items = Array(10)
     .fill(0)
     .map((_, i) => i);
@@ -1221,7 +1302,7 @@ class FixedSizeVirtualScroll {
   template: `
     <cdk-virtual-scroll-viewport dir="rtl"
         [itemSize]="itemSize" [minBufferPx]="minBufferPx" [maxBufferPx]="maxBufferPx"
-        [orientation]="orientation" [style.height.px]="viewportHeight"
+        [orientation]="orientation" [disableAppending]="true" [style.height.px]="viewportHeight"
         [style.width.px]="viewportWidth" (scrolledIndexChange)="scrolledToIndex = $event">
       <div class="item"
            *cdkVirtualFor="let item of items; let i = index; trackBy: trackBy; \
